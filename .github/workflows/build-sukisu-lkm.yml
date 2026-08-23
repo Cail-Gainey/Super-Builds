@@ -66,6 +66,15 @@ jobs:
         # over a workspace owned by another uid, so whitelist it first.
         git config --global --add safe.directory '*'
 
+        # KSU_VERSION otherwise comes from a live GitHub API count of `main`,
+        # which overrides the checked-out ref and makes the pin cosmetic.
+        # Freeze it to the ref we actually built.
+        COUNT=$(git rev-list --count HEAD)
+        TAG=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//')
+        sed -i "s|^GITHUB_COMMITS .*|GITHUB_COMMITS := $COUNT|" Kbuild
+        [ -n "$TAG" ] && sed -i "s|^KSU_GITHUB_VER .*|KSU_GITHUB_VER := $TAG|" Kbuild
+        echo "Reported version pinned to ${TAG:-?}_$((40000 + COUNT - 2815))"
+
         CONFIG_KSU=m CC=clang make
 
         OUT_DIR="$GITHUB_WORKSPACE/out/lkm"

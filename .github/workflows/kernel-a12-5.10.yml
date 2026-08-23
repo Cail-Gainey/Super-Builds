@@ -46,6 +46,10 @@ on:
         description: "SukiSU commit (empty = pinned default)"
         type: string
         default: ""
+      sukisu_version_ref:
+        description: "SukiSU main ref whose version to report (empty = live API)"
+        type: string
+        default: ""
       build_lkm:
         description: "Also build SukiSU LKM (kernelsu.ko, no SUSFS)"
         type: boolean
@@ -85,6 +89,9 @@ on:
         type: boolean
         default: true
       sukisu_commit:
+        type: string
+        default: ""
+      sukisu_version_ref:
         type: string
         default: ""
       build_lkm:
@@ -168,6 +175,7 @@ jobs:
       add_overlayfs_support: ${{ inputs.add_overlayfs_support }}
       add_kpm: ${{ inputs.add_kpm }}
       sukisu_commit: ${{ inputs.sukisu_commit }}
+      sukisu_version_ref: ${{ inputs.sukisu_version_ref }}
       device_codename: ${{ inputs.device_codename }}
 
   build-ksu-next:

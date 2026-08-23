@@ -46,6 +46,10 @@ on:
       sukisu_commit:
         type: string
         default: ""
+      sukisu_version_ref:
+        description: "SukiSU main-branch ref whose version number to report (empty = live GitHub API)"
+        type: string
+        default: ""
       device_codename:
         type: string
         default: ""
@@ -174,6 +178,7 @@ jobs:
       working-directory: ${{ env.KERNEL_ROOT }}
       env:
         SUKISU_COMMIT: ${{ inputs.sukisu_commit }}
+        SUKISU_VERSION_REF: ${{ inputs.sukisu_version_ref }}
       run: |
         curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" | bash -s builtin
         [ -d "$KERNEL_ROOT/$KSU_DIR" ] || { echo "FATAL: $KSU_DIR not created by setup.sh"; exit 1; }
@@ -184,6 +189,23 @@ jobs:
           git fetch origin
           git checkout "$PIN"
           echo "Pinned SukiSU to $(git rev-parse --short=7 HEAD)"
+        fi
+
+        # KSU_VERSION is derived from a live GitHub API count of the `main`
+        # branch, so it floats on every build regardless of the pinned commit.
+        # Freezing it to a chosen main-branch ref makes the reported version
+        # reproducible and drops the build's dependency on api.github.com.
+        if [ -n "$SUKISU_VERSION_REF" ]; then
+          cd "$KERNEL_ROOT/$KSU_DIR"
+          git fetch origin --tags
+          COUNT=$(git rev-list --count "$SUKISU_VERSION_REF")
+          TAG=$(git describe --tags --abbrev=0 "$SUKISU_VERSION_REF" 2>/dev/null | sed 's/^v//')
+          for VF in kernel/Makefile kernel/Kbuild; do
+            [ -f "$VF" ] || continue
+            sed -i "s|^GITHUB_COMMITS .*|GITHUB_COMMITS := $COUNT|" "$VF"
+            [ -n "$TAG" ] && sed -i "s|^KSU_GITHUB_VER .*|KSU_GITHUB_VER := $TAG|" "$VF"
+          done
+          echo "Pinned reported version to ${TAG:-?}_$((40000 + COUNT - 2815)) (ref $SUKISU_VERSION_REF)"
         fi
 
         cd "$KERNEL_ROOT/common"
