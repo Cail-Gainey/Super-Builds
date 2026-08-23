@@ -1,5 +1,21 @@
 {
   "devices": {
+    "gki_a12_5_10_246": {
+      "name": "Google certified GKI (android12-5.10-2025-12)",
+      "codename": "gki_a12_5_10_246",
+      "android_version": "android12",
+      "kernel_version": "5.10",
+      "sub_level": "246",
+      "os_patch_level": "2025-12",
+      "stock_kernel": {
+        "release": "-android12-9-00032-gc8d19ae79d9f-ab15925918",
+        "version_string": "#1 SMP PREEMPT Thu Jul 23 09:43:23 UTC 2026",
+        "build_user": "build-user",
+        "build_host": "build-host",
+        "compiler_info": "Android (7284624, based on r416183b) clang version 12.0.5"
+      },
+      "_source": "strings boot-5.10.img from https://dl.google.com/android/gki/gki-certified-boot-android12-5.10-2025-12_r6.zip"
+    },
     "lake": {
       "name": "Xiaomi Redmi 14C",
       "codename": "lake",
