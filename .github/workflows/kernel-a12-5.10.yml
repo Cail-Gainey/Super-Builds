@@ -46,6 +46,14 @@ on:
         description: "SukiSU commit (empty = pinned default)"
         type: string
         default: ""
+      build_lkm:
+        description: "Also build SukiSU LKM (kernelsu.ko, no SUSFS)"
+        type: boolean
+        default: true
+      sukisu_lkm_commit:
+        description: "SukiSU main-branch commit for LKM (empty = main)"
+        type: string
+        default: ""
       device_codename:
         description: "Device profile (generic = no identity spoofing)"
         type: choice
@@ -79,6 +87,12 @@ on:
       sukisu_commit:
         type: string
         default: ""
+      build_lkm:
+        type: boolean
+        default: true
+      sukisu_lkm_commit:
+        type: string
+        default: ""
       device_codename:
         type: string
         default: "lake"
@@ -89,6 +103,16 @@ jobs:
     permissions:
       contents: read
       actions: write
+
+  build-sukisu-lkm:
+    if: inputs.build_lkm && inputs.ksu_variant == 'SukiSU'
+    uses: ./.github/workflows/build-sukisu-lkm.yml
+    permissions:
+      contents: read
+    with:
+      kmi: android12-5.10
+      version_dir: android12-5.10
+      sukisu_lkm_commit: ${{ inputs.sukisu_lkm_commit }}
 
   build-sukisu:
     needs: [download-dependencies]

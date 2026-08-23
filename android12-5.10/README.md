@@ -125,6 +125,7 @@ Each variant is a different fork of KernelSU. The CI checks out the exact commit
 | Variant | Fork | Pin File |
 |---------|------|----------|
 | SukiSU Ultra | [SukiSU-Ultra/SukiSU-Ultra](https://github.com/SukiSU-Ultra/SukiSU-Ultra) | `sukisu-pin.txt` |
+| SukiSU Ultra (LKM) | [SukiSU-Ultra/SukiSU-Ultra](https://github.com/SukiSU-Ultra/SukiSU-Ultra) `main` | `sukisu-lkm-pin.txt` (optional) |
 | ReSukiSU | [ReSukiSU/ReSukiSU](https://github.com/ReSukiSU/ReSukiSU) | `resukisu-pin.txt` |
 | KernelSU-Next | [KernelSU-Next/KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next) | `kernelsu-next-pin.txt` |
 | WildKSU | [WildKernels/Wild_KSU](https://github.com/WildKernels/Wild_KSU) | `wksu-pin.txt` |
@@ -186,6 +187,23 @@ gh workflow run build-sukisu.yml --ref main \
 | `add_overlayfs_support` | true | Enables overlayfs config section |
 | `add_bbg` | false | Runs `setup-bbg.sh` |
 | `add_kpm` | false | Enables KPM config section |
+| `build_lkm` | true | Builds `kernelsu.ko` alongside the kernel (SukiSU variant only) |
+
+### SukiSU LKM
+
+`kernel-a12-5.10.yml` runs a `build-sukisu-lkm` job in parallel with the normal kernel build when `build_lkm` is on and `ksu_variant` is `SukiSU`. It produces a loadable `kernelsu.ko` for **stock** `android12-5.10` kernels — no kernel rebuild, no AnyKernel3 zip. Flash it with `ksud`.
+
+The job runs inside `ghcr.io/ylarod/ddk-min:android12-5.10-<ddk_release>`, which ships the DDK headers, `KDIR`, and clang. Build is `CONFIG_KSU=m CC=clang make` in SukiSU's `kernel/` directory, mirroring SukiSU's own `ddk-lkm.yml`. Output is aarch64 only.
+
+| Input | Default | Controls |
+|-------|---------|----------|
+| `sukisu_lkm_commit` | `""` | SukiSU commit for the LKM. Empty → `sukisu-lkm-pin.txt`, then `main`. |
+| `ddk_release` | `20260313` | Date tag of the DDK image. Set in `build-sukisu-lkm.yml`. |
+
+> [!IMPORTANT]
+> **The LKM has no SUSFS.** LKM requires `CONFIG_KSU` to be `tristate`, which only SukiSU's `main` branch declares — and `main` carries zero `CONFIG_KSU_SUSFS` entries and no susfs sources. The `builtin` branch used for the normal build declares `CONFIG_KSU` as `bool` and cannot produce a `.ko`. SUSFS and LKM are mutually exclusive upstream, so ZeroMount does not work on LKM builds.
+
+This is why the LKM uses a separate pin (`sukisu-lkm-pin.txt`, `main` branch) from `sukisu-pin.txt` (`builtin` branch). The file is optional — if absent, the job tracks `main`.
 
 ### Dry-Testing (Patch Validation)
 

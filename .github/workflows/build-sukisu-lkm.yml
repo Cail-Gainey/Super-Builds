@@ -1,0 +1,107 @@
+name: Build SukiSU LKM
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+    inputs:
+      kmi:
+        description: "KMI branch the module is built against (e.g. android12-5.10)"
+        type: string
+        required: true
+      version_dir:
+        description: "Repo directory holding the optional pin file"
+        type: string
+        required: true
+      ddk_release:
+        description: "ghcr.io/ylarod/ddk-min image date tag"
+        type: string
+        default: "20260313"
+      sukisu_lkm_commit:
+        description: "SukiSU main-branch commit (empty = pin file, else main)"
+        type: string
+        default: ""
+
+jobs:
+  build-lkm:
+    name: "SukiSU LKM ${{ inputs.kmi }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: ghcr.io/ylarod/ddk-min:${{ inputs.kmi }}-${{ inputs.ddk_release }}
+      options: --privileged
+    env:
+      KSU_REPO: SukiSU-Ultra/SukiSU-Ultra
+      KSU_SRC_DIR: SukiSU-Ultra
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v6
+
+    - name: Resolve SukiSU Ref
+      env:
+        INPUT_COMMIT: ${{ inputs.sukisu_lkm_commit }}
+        VERSION_DIR: ${{ inputs.version_dir }}
+      run: |
+        # LKM comes from the `main` branch: `builtin` declares CONFIG_KSU as bool
+        # and cannot produce a .ko. main is tristate but carries no SUSFS.
+        REF="${INPUT_COMMIT:-$(cat "$GITHUB_WORKSPACE/$VERSION_DIR/sukisu-lkm-pin.txt" 2>/dev/null || true)}"
+        echo "KSU_REF=${REF:-main}" >> "$GITHUB_ENV"
+
+    - name: Checkout SukiSU
+      uses: actions/checkout@v6
+      with:
+        repository: ${{ env.KSU_REPO }}
+        ref: ${{ env.KSU_REF }}
+        path: ${{ env.KSU_SRC_DIR }}
+        fetch-depth: 0
+
+    - name: Build kernelsu.ko
+      working-directory: ${{ env.KSU_SRC_DIR }}/kernel
+      env:
+        KMI: ${{ inputs.kmi }}
+      run: |
+        # Kbuild shells out to git for KSU_VERSION; the container runs as root
+        # over a workspace owned by another uid, so whitelist it first.
+        git config --global --add safe.directory '*'
+
+        CONFIG_KSU=m CC=clang make
+
+        OUT_DIR="$GITHUB_WORKSPACE/out/lkm"
+        mkdir -p "$OUT_DIR"
+        cp kernelsu.ko "$OUT_DIR/${KMI}_kernelsu.ko"
+        llvm-strip -d "$OUT_DIR/${KMI}_kernelsu.ko"
+
+        {
+          echo "KSU_SHA=$(git -C "$GITHUB_WORKSPACE/$KSU_SRC_DIR" rev-parse --short=8 HEAD)"
+          echo "KO_SIZE=$(du -h "$OUT_DIR/${KMI}_kernelsu.ko" | cut -f1)"
+        } >> "$GITHUB_ENV"
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v7
+      with:
+        name: ${{ inputs.kmi }}-SukiSU-LKM
+        path: out/lkm/${{ inputs.kmi }}_kernelsu.ko
+        if-no-files-found: error
+        compression-level: 9
+
+    - name: Job Summary
+      if: always()
+      env:
+        KMI: ${{ inputs.kmi }}
+        DDK_RELEASE: ${{ inputs.ddk_release }}
+      run: |
+        {
+          echo "## SukiSU LKM | ${KMI}"
+          echo ""
+          echo "| Feature | Status |"
+          echo "|---------|--------|"
+          echo "| **KMI** | ${KMI} |"
+          echo "| **DDK Image** | ghcr.io/ylarod/ddk-min:${KMI}-${DDK_RELEASE} |"
+          echo "| **SukiSU Ref** | ${KSU_REF} (${KSU_SHA:-unknown}) |"
+          echo "| **Arch** | aarch64 |"
+          echo "| **SUSFS** | Unavailable (main branch has no CONFIG_KSU_SUSFS) |"
+          echo "| **Module Size** | ${KO_SIZE:-n/a} |"
+          echo "| **Artifact** | ${KMI}-SukiSU-LKM |"
+        } >> "$GITHUB_STEP_SUMMARY"
