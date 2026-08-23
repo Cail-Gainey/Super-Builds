@@ -42,6 +42,10 @@ on:
         description: "Add KPM (SukiSU/ReSukiSU)"
         type: boolean
         default: true
+      add_droidspaces:
+        description: "Add Droidspaces GKI support (kABI patches + IPC/NS configs)"
+        type: boolean
+        default: false
       sukisu_commit:
         description: "SukiSU commit (empty = pinned default)"
         type: string
@@ -88,6 +92,9 @@ on:
       add_kpm:
         type: boolean
         default: true
+      add_droidspaces:
+        type: boolean
+        default: false
       sukisu_commit:
         type: string
         default: ""
@@ -174,6 +181,7 @@ jobs:
       add_bbg: ${{ inputs.add_bbg }}
       add_overlayfs_support: ${{ inputs.add_overlayfs_support }}
       add_kpm: ${{ inputs.add_kpm }}
+      add_droidspaces: ${{ inputs.add_droidspaces }}
       sukisu_commit: ${{ inputs.sukisu_commit }}
       sukisu_version_ref: ${{ inputs.sukisu_version_ref }}
       device_codename: ${{ inputs.device_codename }}

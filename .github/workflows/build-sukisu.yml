@@ -37,6 +37,9 @@ on:
       add_kpm:
         type: boolean
         default: false
+      add_droidspaces:
+        type: boolean
+        default: false
       add_ptrace_fix:
         type: boolean
         default: true
@@ -274,6 +277,15 @@ jobs:
       run: |
         bash "$GITHUB_WORKSPACE/android12-5.10/build-helpers/apply-kernel-patches.sh" . "$KERNEL_VER" "$KERNEL_PATCHES"
 
+    - name: Apply Droidspaces kABI Patches
+      if: inputs.add_droidspaces
+      working-directory: ${{ env.KERNEL_ROOT }}/common
+      run: |
+        HELPERS="$GITHUB_WORKSPACE/$VERSION_DIR/build-helpers"
+        SCRIPT="$HELPERS/setup-droidspaces.sh"
+        [ -f "$SCRIPT" ] || { echo "FATAL: $SCRIPT not found — Droidspaces is not wired up for $VERSION_DIR"; exit 1; }
+        bash "$SCRIPT" . "$KERNEL_VER" "$KERNEL_PATCHES"
+
     - name: Setup Baseband Guard
       if: inputs.add_bbg
       working-directory: ${{ env.KERNEL_ROOT }}
@@ -314,6 +326,7 @@ jobs:
         ADD_OVERLAYFS: ${{ inputs.add_overlayfs_support }}
         ADD_ZRAM: ${{ inputs.add_zram }}
         ADD_KPM: ${{ inputs.add_kpm }}
+        ADD_DROIDSPACES: ${{ inputs.add_droidspaces }}
       run: |
         FRAGMENT="$GITHUB_WORKSPACE/$VERSION_DIR/defconfig.fragment"
         HELPERS="$GITHUB_WORKSPACE/$VERSION_DIR/build-helpers"
@@ -323,6 +336,7 @@ jobs:
         [[ "$ADD_OVERLAYFS" == "true" ]] && ASSEMBLE_FLAGS="$ASSEMBLE_FLAGS --overlayfs"
         [[ "$ADD_ZRAM" == "true" ]] && ASSEMBLE_FLAGS="$ASSEMBLE_FLAGS --zram"
         [[ "$ADD_KPM" == "true" ]] && ASSEMBLE_FLAGS="$ASSEMBLE_FLAGS --kpm"
+        [[ "$ADD_DROIDSPACES" == "true" ]] && ASSEMBLE_FLAGS="$ASSEMBLE_FLAGS --droidspaces"
         [ ! -f "$KERNEL_ROOT/build/build.sh" ] && ASSEMBLE_FLAGS="$ASSEMBLE_FLAGS --kleaf"
 
         bash "$HELPERS/assemble-defconfig.sh" "$FRAGMENT" "$DEFCONFIG_FRAGMENT" "$DEFCONFIG" $ASSEMBLE_FLAGS
@@ -525,6 +539,7 @@ jobs:
         ADD_BBG: ${{ inputs.add_bbg }}
         ADD_OVERLAYFS: ${{ inputs.add_overlayfs_support }}
         ADD_KPM: ${{ inputs.add_kpm }}
+        ADD_DROIDSPACES: ${{ inputs.add_droidspaces }}
       run: |
         S() { [[ "$1" == "true" ]] && echo "Enabled" || echo "Disabled"; }
         {
@@ -543,6 +558,7 @@ jobs:
           echo "| **Unicode Filter** | Enabled |"
           echo "| **Baseband Guard** | $(S "$ADD_BBG") |"
           echo "| **KPM** | $(S "$ADD_KPM") |"
+          echo "| **Droidspaces (GKI kABI)** | $(S "$ADD_DROIDSPACES") |"
           echo "| **Device Profile** | ${IDENTITY_STATUS:-Generic} |"
           echo "| **Rejects** | ${REJ_COUNT:-0} |"
           echo "| **Artifact** | ${FILE_NAME} |"

@@ -150,6 +150,7 @@ Scripts in `build-helpers/` are called by CI at specific stages. They handle dif
 | `clean-module-list.sh` | Pre-build | Removes modules not needed for the target device. |
 | `report-config.sh` | Post-config | Prints enabled features to CI logs for verification. |
 | `setup-bbg.sh` | Pre-build | Configures BBG support. |
+| `setup-droidspaces.sh` | Post-patch | Applies Droidspaces GKI kABI patches. **Fails the build** on any patch problem. |
 
 ---
 
@@ -187,7 +188,33 @@ gh workflow run build-sukisu.yml --ref main \
 | `add_overlayfs_support` | true | Enables overlayfs config section |
 | `add_bbg` | false | Runs `setup-bbg.sh` |
 | `add_kpm` | false | Enables KPM config section |
+| `add_droidspaces` | false | Applies Droidspaces kABI patches + enables IPC/namespace configs |
 | `build_lkm` | true | Builds `kernelsu.ko` alongside the kernel (SukiSU variant only) |
+
+### Droidspaces (GKI container support)
+
+Enables [Droidspaces](https://github.com/ravindu644/Droidspaces-OSS) by turning on `CONFIG_SYSVIPC`, `CONFIG_POSIX_MQUEUE`, `CONFIG_IPC_NS`, `CONFIG_PID_NS` and friends.
+
+> [!CAUTION]
+> **The kABI patches are not optional.** Enabling those configs on a GKI kernel shifts `task_struct` / `user_struct` offsets, and pre-compiled vendor modules (GPU, camera) then read the wrong fields — immediate bootloop. `setup-droidspaces.sh` moves the new fields into `ANDROID_KABI_RESERVE` padding so offsets stay put.
+
+Because a silently-skipped patch here produces an unbootable image, `setup-droidspaces.sh` fails the build on any patch problem — no `-F` fuzz, `--batch` so `patch` can never prompt or reverse-apply, `--forward` so an already-applied tree errors instead of being undone. This is deliberately stricter than `apply-kernel-patches.sh`, which tolerates failures with `|| true`.
+
+Patches come from the `kernel_patches` artifact (`common/droidspaces/`), already downloaded by every build — nothing is vendored here.
+
+| Patch | Target | Applies to |
+|-------|--------|-----------|
+| `fix_sysvipc_kabi_6_7_8.patch` | `include/linux/sched.h` | < 6.12 |
+| `fix_sysvipc_kabi_a16-6.12.patch` | `include/linux/sched.h` | ≥ 6.12 |
+| `fix_abi_padding_for_posix_mqueue.patch` | `include/linux/sched/user.h` | ≤ 5.10 |
+| `0001-Guard-USER_NS-for-non-root-users.patch` | `kernel/user_namespace.c` | all |
+
+The last one is hardening, not a Droidspaces requirement: `CONFIG_USER_NS=y` otherwise lets any app create user namespaces, a well-known local privilege escalation surface. It gates creation behind `CAP_SYS_ADMIN`, so root-run containers still work.
+
+Verified applying cleanly (zero fuzz) against `android12-5.10-2025-12` (5.10.246). **Only android12-5.10 is wired up** — `setup-droidspaces.sh` lives in this directory only, and the build step fails loudly if another version enables the flag without it.
+
+If the sysvipc patch bootloops, upstream ships `fix_sysvipc_kabi_1_2_3.patch` and `fix_sysvipc_kabi_3_4_5.patch` using different KABI slots; on 5.10.246 slots 6/7/8 are free (1 and 2 are taken by `pf_io_worker`) so `6_7_8` is correct here.
+
 
 ### SukiSU LKM
 
