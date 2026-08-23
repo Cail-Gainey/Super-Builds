@@ -68,11 +68,22 @@ jobs:
 
         # KSU_VERSION otherwise comes from a live GitHub API count of `main`,
         # which overrides the checked-out ref and makes the pin cosmetic.
-        # Freeze it to the ref we actually built.
+        # Freeze it to the ref we actually built. Two variable schemas exist
+        # across SukiSU history; patch whichever is present, fail if neither.
         COUNT=$(git rev-list --count HEAD)
         TAG=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//')
-        sed -i "s|^GITHUB_COMMITS .*|GITHUB_COMMITS := $COUNT|" Kbuild
-        [ -n "$TAG" ] && sed -i "s|^KSU_GITHUB_VER .*|KSU_GITHUB_VER := $TAG|" Kbuild
+        PATCHED=0
+        for VF in Kbuild Makefile; do
+          [ -f "$VF" ] || continue
+          sed -i -e "s|^GITHUB_COMMITS .*|GITHUB_COMMITS := $COUNT|" \
+                 -e "s|^KSU_GITHUB_VERSION_COMMIT .*|KSU_GITHUB_VERSION_COMMIT := $COUNT|" "$VF"
+          if [ -n "$TAG" ]; then
+            sed -i -e "s|^KSU_GITHUB_VER .*|KSU_GITHUB_VER := $TAG|" \
+                   -e "s|^KSU_GITHUB_VERSION .*|KSU_GITHUB_VERSION := $TAG|" "$VF"
+          fi
+          grep -qE "^(GITHUB_COMMITS|KSU_GITHUB_VERSION_COMMIT) := $COUNT$" "$VF" && PATCHED=1
+        done
+        [ "$PATCHED" -eq 1 ] || { echo "FATAL: no known version block in Kbuild or Makefile"; exit 1; }
         echo "Reported version pinned to ${TAG:-?}_$((40000 + COUNT - 2815))"
 
         CONFIG_KSU=m CC=clang make

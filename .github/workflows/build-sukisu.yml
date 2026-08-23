@@ -195,16 +195,25 @@ jobs:
         # branch, so it floats on every build regardless of the pinned commit.
         # Freezing it to a chosen main-branch ref makes the reported version
         # reproducible and drops the build's dependency on api.github.com.
+        # Two schemas exist: KSU_GITHUB_VERSION_COMMIT/KSU_GITHUB_VERSION on
+        # older builtin commits, GITHUB_COMMITS/KSU_GITHUB_VER on newer ones.
         if [ -n "$SUKISU_VERSION_REF" ]; then
           cd "$KERNEL_ROOT/$KSU_DIR"
           git fetch origin --tags
           COUNT=$(git rev-list --count "$SUKISU_VERSION_REF")
           TAG=$(git describe --tags --abbrev=0 "$SUKISU_VERSION_REF" 2>/dev/null | sed 's/^v//')
-          for VF in kernel/Makefile kernel/Kbuild; do
+          PATCHED=0
+          for VF in kernel/Kbuild kernel/Makefile; do
             [ -f "$VF" ] || continue
-            sed -i "s|^GITHUB_COMMITS .*|GITHUB_COMMITS := $COUNT|" "$VF"
-            [ -n "$TAG" ] && sed -i "s|^KSU_GITHUB_VER .*|KSU_GITHUB_VER := $TAG|" "$VF"
+            sed -i -e "s|^GITHUB_COMMITS .*|GITHUB_COMMITS := $COUNT|" \
+                   -e "s|^KSU_GITHUB_VERSION_COMMIT .*|KSU_GITHUB_VERSION_COMMIT := $COUNT|" "$VF"
+            if [ -n "$TAG" ]; then
+              sed -i -e "s|^KSU_GITHUB_VER .*|KSU_GITHUB_VER := $TAG|" \
+                     -e "s|^KSU_GITHUB_VERSION .*|KSU_GITHUB_VERSION := $TAG|" "$VF"
+            fi
+            grep -qE "^(GITHUB_COMMITS|KSU_GITHUB_VERSION_COMMIT) := $COUNT$" "$VF" && PATCHED=1
           done
+          [ "$PATCHED" -eq 1 ] || { echo "FATAL: no known version block in kernel/Kbuild or kernel/Makefile"; exit 1; }
           echo "Pinned reported version to ${TAG:-?}_$((40000 + COUNT - 2815)) (ref $SUKISU_VERSION_REF)"
         fi
 
