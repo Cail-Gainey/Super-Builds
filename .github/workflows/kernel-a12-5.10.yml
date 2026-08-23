@@ -59,9 +59,9 @@ on:
         type: string
         default: ""
       sukisu_version_ref:
-        description: "SukiSU main ref whose version to report (empty = live API)"
+        description: "SukiSU main ref whose version to report (v4.1.3 = 40796; empty = live API, floats to latest)"
         type: string
-        default: ""
+        default: "0ca744a8"
       build_lkm:
         description: "Also build SukiSU LKM (kernelsu.ko, no SUSFS)"
         type: boolean
@@ -114,7 +114,7 @@ on:
         default: ""
       sukisu_version_ref:
         type: string
-        default: ""
+        default: "0ca744a8"
       build_lkm:
         type: boolean
         default: true
