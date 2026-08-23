@@ -6,6 +6,10 @@ CONFIG_IP6_NF_MATCH_HL=y
 CONFIG_TCP_CONG_ADVANCED=y
 CONFIG_TCP_CONG_BBR=y
 CONFIG_NET_SCH_FQ=y
+CONFIG_NET_SCH_FQ_CODEL=y
+CONFIG_NET_SCH_CAKE=y
+CONFIG_NET_SCH_PIE=y
+CONFIG_NET_SCH_FQ_PIE=y
 CONFIG_TCP_CONG_CUBIC=y
 CONFIG_TCP_CONG_BIC=n
 CONFIG_TCP_CONG_WESTWOOD=y
@@ -79,6 +83,17 @@ CONFIG_TMPFS_POSIX_ACL=y
 
 # [kpm]
 CONFIG_KPM=y
+
+# [bbrv3]
+# Requires the BBRv3 backport from setup-extra-features.sh — these symbols do
+# not exist in stock net/ipv4/Kconfig.
+CONFIG_TCP_CONG_BBR3=y
+CONFIG_DEFAULT_BBR3=y
+CONFIG_DEFAULT_TCP_CONG="bbr3"
+
+# [ntsync]
+# Requires the NTSync patches from setup-extra-features.sh.
+CONFIG_NTSYNC=y
 
 # [droidspaces]
 # Requires the kABI patches from setup-droidspaces.sh — enabling the IPC and

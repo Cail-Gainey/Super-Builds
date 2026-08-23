@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"cd /tmp/sukisu && timeout 120 git ls-tree -r --name-only origin/main .github/workflows 2>&1 | head -20; echo \\\"=== grep lkm in main tree ===\\\"; timeout 120 git grep -l -i \\\"lkm\\\" origin/ma...",
+  "error": "Exit code 143\nCommand timed out after 2m 0s\n.github/workflows/add-device.yml\n.github/workflows/build-lkm.yml\n.github/workflows/build-manager.yml\n.github/workflows/build-su.yml\n.github/workflows/clang-format.yml\n.github/workflows/clippy.yml\n.github/workflows/crowdin.yml\n.github/workflows/ddk-lkm.yml\n.github/workflows/deploy-website.yml\n.github/workflows/ksud-extra.yml\n.github/workflows/ksud.yml\n.github/workflows/ksuinit.yml\n.github/workflows/release.yml\n.github/workflows/rustfmt.yml\n.github/workf...",
+  "timestamp": "2026-08-23T13:31:27.133Z",
+  "retry_count": 1
+}

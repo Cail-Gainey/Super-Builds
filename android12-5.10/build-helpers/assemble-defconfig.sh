@@ -11,6 +11,8 @@ ADD_OVERLAYFS=false
 ADD_ZRAM=false
 ADD_KPM=false
 ADD_DROIDSPACES=false
+ADD_BBRV3=false
+ADD_NTSYNC=false
 
 for arg in "$@"; do
   case "$arg" in
@@ -19,6 +21,8 @@ for arg in "$@"; do
     --zram) ADD_ZRAM=true ;;
     --kpm) ADD_KPM=true ;;
     --droidspaces) ADD_DROIDSPACES=true ;;
+    --bbrv3) ADD_BBRV3=true ;;
+    --ntsync) ADD_NTSYNC=true ;;
   esac
 done
 
@@ -32,6 +36,8 @@ $ADD_OVERLAYFS && extract_section "overlayfs" >> "$FRAGMENT_DST"
 $ADD_ZRAM && extract_section "zram" >> "$FRAGMENT_DST"
 $ADD_KPM && extract_section "kpm" >> "$FRAGMENT_DST"
 $ADD_DROIDSPACES && extract_section "droidspaces" >> "$FRAGMENT_DST"
+$ADD_BBRV3 && extract_section "bbrv3" >> "$FRAGMENT_DST"
+$ADD_NTSYNC && extract_section "ntsync" >> "$FRAGMENT_DST"
 
 # dedup fragment: last-wins per CONFIG_ key
 tac "$FRAGMENT_DST" | awk -F= '/^CONFIG_/{if(seen[$1]++)next} {print}' | tac > "${FRAGMENT_DST}.tmp"

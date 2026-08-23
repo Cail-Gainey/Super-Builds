@@ -46,6 +46,14 @@ on:
         description: "Add Droidspaces GKI support (kABI patches + IPC/NS configs)"
         type: boolean
         default: false
+      add_bbrv3:
+        description: "Add TCP BBRv3 backport (sets default congestion control to bbr3)"
+        type: boolean
+        default: true
+      add_ntsync:
+        description: "Add NTSync (NT synchronization primitive emulation)"
+        type: boolean
+        default: true
       sukisu_commit:
         description: "SukiSU commit (empty = pinned default)"
         type: string
@@ -95,6 +103,12 @@ on:
       add_droidspaces:
         type: boolean
         default: false
+      add_bbrv3:
+        type: boolean
+        default: true
+      add_ntsync:
+        type: boolean
+        default: true
       sukisu_commit:
         type: string
         default: ""
@@ -182,6 +196,8 @@ jobs:
       add_overlayfs_support: ${{ inputs.add_overlayfs_support }}
       add_kpm: ${{ inputs.add_kpm }}
       add_droidspaces: ${{ inputs.add_droidspaces }}
+      add_bbrv3: ${{ inputs.add_bbrv3 }}
+      add_ntsync: ${{ inputs.add_ntsync }}
       sukisu_commit: ${{ inputs.sukisu_commit }}
       sukisu_version_ref: ${{ inputs.sukisu_version_ref }}
       device_codename: ${{ inputs.device_codename }}

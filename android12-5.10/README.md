@@ -151,6 +151,7 @@ Scripts in `build-helpers/` are called by CI at specific stages. They handle dif
 | `report-config.sh` | Post-config | Prints enabled features to CI logs for verification. |
 | `setup-bbg.sh` | Pre-build | Configures BBG support. |
 | `setup-droidspaces.sh` | Post-patch | Applies Droidspaces GKI kABI patches. **Fails the build** on any patch problem. |
+| `setup-extra-features.sh` | Post-patch | Applies BBRv3 / NTSync feature patches. **Fails the build** on any patch problem. |
 
 ---
 
@@ -189,7 +190,39 @@ gh workflow run build-sukisu.yml --ref main \
 | `add_bbg` | false | Runs `setup-bbg.sh` |
 | `add_kpm` | false | Enables KPM config section |
 | `add_droidspaces` | false | Applies Droidspaces kABI patches + enables IPC/namespace configs |
+| `add_bbrv3` | true | Backports TCP BBRv3 and makes it the default congestion control |
+| `add_ntsync` | true | Adds NTSync (NT synchronization primitive emulation) |
 | `build_lkm` | true | Builds `kernelsu.ko` alongside the kernel (SukiSU variant only) |
+
+### Extra Feature Patches
+
+`setup-extra-features.sh` pulls optional feature patches from the `kernel_patches` artifact (`common/bbrv3/`, `common/ntsync/`). Failures are fatal here — unlike the micro-optimisations in `apply-kernel-patches.sh`, a skipped patch would leave the defconfig referencing Kconfig symbols that do not exist.
+
+| Feature | Patches | Adds |
+|---------|---------|------|
+| BBRv3 | `0001-net-tcp-backport-BBRv3-to-android12-5.10.patch` (+ `sysctl_*` backports when needed) | `CONFIG_TCP_CONG_BBR3`, `net/ipv4/tcp_bbr3.c`, `net/ipv4/tcp_plb.c` |
+| NTSync | `ntsync_base.patch` + `ntsync_compat_android12-5.10.patch` | `CONFIG_NTSYNC`, `drivers/misc/ntsync.c` |
+
+> [!NOTE]
+> `add_bbrv3` sets `CONFIG_DEFAULT_TCP_CONG="bbr3"` — it does not just make BBRv3 available, it becomes the system default. Stock BBR (`CONFIG_TCP_CONG_BBR`) and CUBIC stay compiled in.
+
+Two details worth knowing:
+
+- **The BBRv3 sysctl backports are conditional.** `proc_dou8vec_minmax` is already in 5.10.246 (`include/linux/sysctl.h`, `kernel/sysctl.c`), so the script skips them; older sublevels get them applied. Applying them unconditionally fails with "previously applied".
+- **NTSync ships two compat variants.** `ntsync_compat_android12-5.10.patch` and `..._A14.patch` target different `include/linux/lockdep.h` baselines. The script dry-runs each and uses the one that fits, failing if neither does. On 5.10.246 the non-A14 variant is correct.
+
+### Already integrated elsewhere
+
+Several commonly-requested `kernel_patches/common` items are already wired up and need no separate toggle:
+
+| Feature | Where |
+|---------|-------|
+| Unicode bypass fix | `apply-kernel-patches.sh` (`unicode_bypass_fix_6.1-.patch` for < 6.1) |
+| IPv6 NAT fix | `apply-kernel-patches.sh` (`IPv6_NAT_FIX.patch`) |
+| Kernel optimisation | `apply-kernel-patches.sh` (22 patches, gated by `add_perf_patches`) |
+| IP Set | `defconfig.fragment` `[base]` (21 `CONFIG_IP_SET*` entries) |
+| TTL / HL target | `defconfig.fragment` `[base]` (`IP_NF_TARGET_TTL`, `IP6_NF_TARGET_HL`, `IP6_NF_MATCH_HL`) |
+| CAKE / PIE qdisc | `defconfig.fragment` `[base]` — config-only, the Kconfig symbols already exist in 5.10 |
 
 ### Droidspaces (GKI container support)
 

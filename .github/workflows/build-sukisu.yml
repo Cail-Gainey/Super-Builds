@@ -40,6 +40,12 @@ on:
       add_droidspaces:
         type: boolean
         default: false
+      add_bbrv3:
+        type: boolean
+        default: false
+      add_ntsync:
+        type: boolean
+        default: false
       add_ptrace_fix:
         type: boolean
         default: true
@@ -277,6 +283,17 @@ jobs:
       run: |
         bash "$GITHUB_WORKSPACE/android12-5.10/build-helpers/apply-kernel-patches.sh" . "$KERNEL_VER" "$KERNEL_PATCHES"
 
+    - name: Apply Extra Feature Patches
+      if: inputs.add_bbrv3 || inputs.add_ntsync
+      working-directory: ${{ env.KERNEL_ROOT }}/common
+      env:
+        ADD_BBRV3: ${{ inputs.add_bbrv3 }}
+        ADD_NTSYNC: ${{ inputs.add_ntsync }}
+      run: |
+        SCRIPT="$GITHUB_WORKSPACE/$VERSION_DIR/build-helpers/setup-extra-features.sh"
+        [ -f "$SCRIPT" ] || { echo "FATAL: $SCRIPT not found — extra features are not wired up for $VERSION_DIR"; exit 1; }
+        bash "$SCRIPT" . "$ANDROID_VER" "$KERNEL_VER" "$KERNEL_PATCHES"
+
     - name: Apply Droidspaces kABI Patches
       if: inputs.add_droidspaces
       working-directory: ${{ env.KERNEL_ROOT }}/common
@@ -327,6 +344,8 @@ jobs:
         ADD_ZRAM: ${{ inputs.add_zram }}
         ADD_KPM: ${{ inputs.add_kpm }}
         ADD_DROIDSPACES: ${{ inputs.add_droidspaces }}
+        ADD_BBRV3: ${{ inputs.add_bbrv3 }}
+        ADD_NTSYNC: ${{ inputs.add_ntsync }}
       run: |
         FRAGMENT="$GITHUB_WORKSPACE/$VERSION_DIR/defconfig.fragment"
         HELPERS="$GITHUB_WORKSPACE/$VERSION_DIR/build-helpers"
@@ -337,6 +356,8 @@ jobs:
         [[ "$ADD_ZRAM" == "true" ]] && ASSEMBLE_FLAGS="$ASSEMBLE_FLAGS --zram"
         [[ "$ADD_KPM" == "true" ]] && ASSEMBLE_FLAGS="$ASSEMBLE_FLAGS --kpm"
         [[ "$ADD_DROIDSPACES" == "true" ]] && ASSEMBLE_FLAGS="$ASSEMBLE_FLAGS --droidspaces"
+        [[ "$ADD_BBRV3" == "true" ]] && ASSEMBLE_FLAGS="$ASSEMBLE_FLAGS --bbrv3"
+        [[ "$ADD_NTSYNC" == "true" ]] && ASSEMBLE_FLAGS="$ASSEMBLE_FLAGS --ntsync"
         [ ! -f "$KERNEL_ROOT/build/build.sh" ] && ASSEMBLE_FLAGS="$ASSEMBLE_FLAGS --kleaf"
 
         bash "$HELPERS/assemble-defconfig.sh" "$FRAGMENT" "$DEFCONFIG_FRAGMENT" "$DEFCONFIG" $ASSEMBLE_FLAGS
@@ -540,6 +561,8 @@ jobs:
         ADD_OVERLAYFS: ${{ inputs.add_overlayfs_support }}
         ADD_KPM: ${{ inputs.add_kpm }}
         ADD_DROIDSPACES: ${{ inputs.add_droidspaces }}
+        ADD_BBRV3: ${{ inputs.add_bbrv3 }}
+        ADD_NTSYNC: ${{ inputs.add_ntsync }}
       run: |
         S() { [[ "$1" == "true" ]] && echo "Enabled" || echo "Disabled"; }
         {
@@ -559,6 +582,8 @@ jobs:
           echo "| **Baseband Guard** | $(S "$ADD_BBG") |"
           echo "| **KPM** | $(S "$ADD_KPM") |"
           echo "| **Droidspaces (GKI kABI)** | $(S "$ADD_DROIDSPACES") |"
+          echo "| **TCP BBRv3** | $(S "$ADD_BBRV3") |"
+          echo "| **NTSync** | $(S "$ADD_NTSYNC") |"
           echo "| **Device Profile** | ${IDENTITY_STATUS:-Generic} |"
           echo "| **Rejects** | ${REJ_COUNT:-0} |"
           echo "| **Artifact** | ${FILE_NAME} |"
