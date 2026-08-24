@@ -71,12 +71,13 @@ on:
         type: string
         default: ""
       device_codename:
-        description: "Device profile (generic = no identity spoofing)"
+        description: "Device profile (generic = no identity spoofing; gki_a12_5_10_246 = real GKI 5.10.246 identity)"
         type: choice
         options:
           - generic
+          - gki_a12_5_10_246
           - lake
-        default: "lake"
+        default: "gki_a12_5_10_246"
   workflow_call:
     inputs:
       ksu_variant:
@@ -123,7 +124,7 @@ on:
         default: ""
       device_codename:
         type: string
-        default: "lake"
+        default: "gki_a12_5_10_246"
 
 jobs:
   download-dependencies:
